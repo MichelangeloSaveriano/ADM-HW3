@@ -2,7 +2,14 @@ from bs4 import BeautifulSoup
 import re
 
 
+def from_list_to_str(lis):
+    return ' ; '.join(lis)
+
+
 def clean_str(string):
+    string = string.strip()
+    if string[-1] == ',':
+        string = string[:-1]
     return ' '.join(string.split())
 
 
@@ -40,9 +47,33 @@ def parse(path):
             'a')
         info['setting'] = [s.text for s in setting]
         info['url'] = soup.find('meta', property='og:url')['content']
+        fp.close()
         return info
 
 
-info = parse('./data/book_1.html')
-for key, value in info.items():
-    print("'", key, "': <", value, '>', sep='')
+def from_html_to_tsv(html_path, tsv_path):
+    with open(tsv_path, mode='w') as tsv_file:
+        html_info = parse(html_path)
+        # print the keys on file
+        tsv_file.write('\t'.join(html_info.keys()))
+        tsv_file.write('\n')
+
+        # print the values on file
+        for k in html_info:
+            if k in ['bookAuthors', 'characters', 'setting']:
+                tsv_file.write(from_list_to_str(html_info[k]) + '\t')
+            else:
+                tsv_file.write(html_info[k] + '\t')
+
+
+def process_pages(starting_page, ending_page, page_folder='./data/', destination_folder='./data/tsv/',
+                  html_prefix='book', tsv_prefix='article', n_book_per_page=100, starting_number=1):
+    for num_page in range(starting_page, ending_page+1):
+        for i in range(n_book_per_page):
+            idx = str((num_page-1)*n_book_per_page+i+starting_number)
+            html_path = page_folder + 'page_' + str(num_page) + '/' + html_prefix + '_' + idx + '.html'
+            tsv_path = destination_folder + tsv_prefix + '_' + idx + '.tsv'
+            from_html_to_tsv(html_path, tsv_path)
+
+if __name__ == '__main__':
+    process_pages(1, 1, n_book_per_page=4)
